@@ -1,27 +1,35 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
-import axios from 'axios';
-
-const API_BASE_URL = 'http://207.127.93.169:8080'; // For Android emulator
-// const API_BASE_URL = 'http://YOUR_PC_IP:8080'; // For physical Android device
+import AuthService from '../services/AuthService';
 
 const LoginScreen = ({ navigation }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
+    if (!username.trim() || !password.trim()) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    setLoading(true);
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/users/login`, {
-        username,
-        password,
-      });
-      Alert.alert('Success', 'Logged in successfully!');
-      // In a real app, you would save the token/user info and navigate to main app
-      console.log('Login successful:', response.data);
-      navigation.navigate('Home'); // Navigate to a placeholder Home screen
+      const result = await AuthService.login(username, password);
+      
+      if (result.success) {
+        Alert.alert('Success', 'Logged in successfully!');
+        console.log('Login successful:', result.data);
+        navigation.navigate('Home');
+      } else {
+        Alert.alert('Error', result.error);
+        console.error('Login error:', result.error);
+      }
     } catch (error) {
-      Alert.alert('Error', error.response?.data || 'Login failed');
-      console.error('Login error:', error.response?.data || error.message);
+      Alert.alert('Error', 'An unexpected error occurred');
+      console.error('Login error:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -34,6 +42,7 @@ const LoginScreen = ({ navigation }) => {
         value={username}
         onChangeText={setUsername}
         autoCapitalize="none"
+        editable={!loading}
       />
       <TextInput
         style={styles.input}
@@ -41,12 +50,18 @@ const LoginScreen = ({ navigation }) => {
         value={password}
         onChangeText={setPassword}
         secureTextEntry
+        editable={!loading}
       />
-      <Button title="Login" onPress={handleLogin} />
+      <Button 
+        title={loading ? "Logging in..." : "Login"} 
+        onPress={handleLogin} 
+        disabled={loading}
+      />
       <Button
         title="Don't have an account? Register"
         onPress={() => navigation.navigate('Register')}
         color="gray"
+        disabled={loading}
       />
     </View>
   );

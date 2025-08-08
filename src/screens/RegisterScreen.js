@@ -1,28 +1,41 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
-import axios from 'axios';
-
-const API_BASE_URL = 'http://207.127.93.169:8080'; // For Android emulator
-// const API_BASE_URL = 'http://YOUR_PC_IP:8080'; // For physical Android device
+import AuthService from '../services/AuthService';
 
 const RegisterScreen = ({ navigation }) => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
+    if (!username.trim() || !email.trim() || !password.trim()) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters long');
+      return;
+    }
+
+    setLoading(true);
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/users/register`, {
-        username,
-        email,
-        password,
-      });
-      Alert.alert('Success', 'Registered successfully! Please login.');
-      console.log('Registration successful:', response.data);
-      navigation.navigate('Login');
+      const result = await AuthService.register(username, email, password);
+      
+      if (result.success) {
+        Alert.alert('Success', 'Registered successfully! Please login.');
+        console.log('Registration successful:', result.data);
+        navigation.navigate('Login');
+      } else {
+        Alert.alert('Error', result.error);
+        console.error('Registration error:', result.error);
+      }
     } catch (error) {
-      Alert.alert('Error', error.response?.data || 'Registration failed');
-      console.error('Registration error:', error.response?.data || error.message);
+      Alert.alert('Error', 'An unexpected error occurred');
+      console.error('Registration error:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -35,6 +48,7 @@ const RegisterScreen = ({ navigation }) => {
         value={username}
         onChangeText={setUsername}
         autoCapitalize="none"
+        editable={!loading}
       />
       <TextInput
         style={styles.input}
@@ -43,19 +57,26 @@ const RegisterScreen = ({ navigation }) => {
         onChangeText={setEmail}
         keyboardType="email-address"
         autoCapitalize="none"
+        editable={!loading}
       />
       <TextInput
         style={styles.input}
-        placeholder="Password"
+        placeholder="Password (min 6 characters)"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
+        editable={!loading}
       />
-      <Button title="Register" onPress={handleRegister} />
+      <Button 
+        title={loading ? "Registering..." : "Register"} 
+        onPress={handleRegister} 
+        disabled={loading}
+      />
       <Button
         title="Already have an account? Login"
         onPress={() => navigation.navigate('Login')}
         color="gray"
+        disabled={loading}
       />
     </View>
   );
